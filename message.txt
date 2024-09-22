@@ -1,0 +1,100 @@
+"""Welcome to Python Flask Lab"""
+from datetime import datetime
+from flask import Flask, render_template, request
+
+
+def save_data(username, password, password_repeat):
+    '''
+    password already validated
+    if username isn't in use save user+password to database
+    :param username:
+    :param password:
+    :return: True if user successfully saved in database
+    '''
+    with open('username_fileDB.txt', 'a+') as file:
+        file.seek(0)
+        for line in file:
+            data = line.strip().split(",")
+            if username == data[0]:
+                return False  # since username exists
+        file.write(username + "," + password + "\r")  # write to end of file since username is unique
+        return True  # success
+
+
+def query_user(username, password):
+    '''
+
+    :param username:
+    :param password:
+    :return: False if username/password not correct
+    '''
+    with open('username_fileDB.txt', 'r') as file:
+        for line in file:
+            data = line.strip().split(",")
+            if username == data[0] and password == data[1]:
+                return True  # user/pass exists
+
+        return False
+
+
+def create_app():
+    """ Flask application factory """
+
+    # Create Flask app load app.config
+    app = Flask(__name__)
+
+    @app.route("/")
+    @app.route("/home")
+    def home():
+        current_time = "Time Stamp: " + str(datetime.now())
+        return render_template("index.html", timestamp=current_time)
+
+    @app.route("/about")
+    def about():
+        current_time = "Time Stamp: " + str(datetime.now())
+        return render_template("about.html", timestamp=current_time)
+
+    @app.route("/photo_gallery")
+    def photo_gallery():
+        current_time = "Time Stamp: " + str(datetime.now())
+        return render_template("photo_gallery.html", timestamp=current_time)
+
+    @app.route("/register")
+    def register():
+        current_time = "Time Stamp: " + str(datetime.now())
+        return render_template("register.html", timestamp=current_time, failed_Attempt=True)
+
+    @app.route("/signin")
+    def signin():
+        current_time = "Time Stamp: " + str(datetime.now())
+        return render_template("sigin.html", timestamp=current_time, error="")
+
+    @app.route("/handle_data", methods=['POST'])
+    def handle_data():
+        current_time = "Time Stamp: " + str(datetime.now())
+        # see what service is needed (register, login, signout)
+        service = request.args["service"]
+        # Perform action based on requested service
+        if service == "register":
+            if save_data(request.form['username'], request.form['psw'], request.form['psw-repeat']):
+                return render_template("register_success.html", timestamp=current_time)
+            else:
+                return render_template("register.html", timestamp=current_time, error="Username Already Exists!")
+        elif service == "signin":
+            username = request.form['username']
+            if query_user(username, request.form['psw']):
+                return render_template("index.html", timestamp=current_time, signedinas="signed in as: " + username)
+            else:
+                return render_template("sigin.html", timestamp=current_time, error="Username/Password Incorrect!")
+        elif service == "signout":
+            return render_template("index.html", timestamp=current_time)
+        else:
+            return "420 Request not Found"
+
+    return app
+
+
+# Start development web server
+if __name__ == '__main__':
+    application = create_app()
+    application.run()
